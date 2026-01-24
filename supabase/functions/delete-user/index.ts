@@ -56,13 +56,6 @@ serve(async (req) => {
 
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceRoleKey);
 
-    const user = data.record; // Assuming the trigger passes the user record
-
-    if (!user || !user.id) {
-      console.error('Invalid user data received from trigger', data);
-      return new Response('Invalid user data', { status: 400 });
-    }
-
     try {
       // 1. Delete associated Sublets
       const { error: subletDeleteError } = await supabaseAdmin

@@ -1,11 +1,17 @@
 import { serve } from 'https://deno.land/std@0.177.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.7.1'
+import { corsHeaders } from '../_shared/cors.ts'
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'POST',
-  'Access-Control-Allow-Headers': '*',
-  'Access-Control-Max-Age': '86400',
+// HTML escape function to prevent XSS in email content
+function escapeHtml(text: string): string {
+  const htmlEntities: Record<string, string> = {
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;',
+  };
+  return text.replace(/[&<>"']/g, (char) => htmlEntities[char]);
 }
 
 serve(async (req) => {
@@ -60,7 +66,7 @@ serve(async (req) => {
           <div>
             <h2>You have a new message on SubletNU</h2>
             <p><strong>${senderProfile.first_name} ${senderProfile.last_name}</strong> sent you a message:</p>
-            <p style="padding: 15px; background-color: #f5f5f5; border-radius: 5px;">${message.text}</p>
+            <p style="padding: 15px; background-color: #f5f5f5; border-radius: 5px;">${escapeHtml(message.text)}</p>
             <p>
               <a href="https://subletnu.vercel.app/messages/${message.sender_id}" 
                  style="padding: 10px 20px; background-color: #E31837; color: white; text-decoration: none; border-radius: 5px; display: inline-block;">
