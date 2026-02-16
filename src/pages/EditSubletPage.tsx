@@ -22,6 +22,7 @@ import { CalendarIcon, ArrowLeft, Loader2, Share2, XCircle, ImagePlus } from "lu
 import { CalendarIcon as CalendarIcon2 } from "lucide-react";
 import AmenitiesSelector from "@/components/AmenitiesSelector";
 import LocationAutocomplete from "@/components/LocationAutocomplete";
+import heic2any from 'heic2any';
 
 // Define Northeastern University coordinates
 const NEU_COORDINATES = { lat: 42.3398, lng: -71.0892 };
@@ -163,7 +164,7 @@ const EditSubletPage = () => {
   };
 
   // Handle file selection for adding new photos
-  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
     if (!files || !currentUser) return;
 
@@ -182,20 +183,69 @@ const EditSubletPage = () => {
       });
     }
 
-    filesToProcess.forEach(file => {
-      if (file.type.startsWith('image/')) {
-        if (photos.length + photoFilesToAdd.length + newFiles.length < MAX_PHOTOS) {
-          newFiles.push(file);
-          newPreviews.push(URL.createObjectURL(file));
+    for (const file of filesToProcess) {
+      try {
+        let processedFile = file;
+
+        // Check if file is HEIC/HEIF and convert to JPEG
+        if (file.type === 'image/heic' || file.type === 'image/heif' ||
+            file.name.toLowerCase().endsWith('.heic') || file.name.toLowerCase().endsWith('.heif')) {
+
+          toast({
+            title: "Converting HEIC Image",
+            description: `Converting ${file.name} to JPEG format...`,
+          });
+
+          try {
+            const convertedBlob = await heic2any({
+              blob: file,
+              toType: 'image/jpeg',
+              quality: 0.9
+            });
+
+            // heic2any can return Blob or Blob[]
+            const blob = Array.isArray(convertedBlob) ? convertedBlob[0] : convertedBlob;
+
+            // Create a new File from the converted blob
+            const newFileName = file.name.replace(/\.(heic|heif)$/i, '.jpg');
+            processedFile = new File([blob], newFileName, { type: 'image/jpeg' });
+
+            toast({
+              title: "Conversion Complete",
+              description: `${file.name} converted to JPEG successfully!`,
+            });
+          } catch (conversionError) {
+            console.error('HEIC conversion error:', conversionError);
+            toast({
+              title: "Conversion Failed",
+              description: `Could not convert ${file.name}. Please use JPG or PNG instead.`,
+              variant: "destructive",
+            });
+            continue;
+          }
         }
-      } else {
+
+        if (processedFile.type.startsWith('image/')) {
+          if (photos.length + photoFilesToAdd.length + newFiles.length < MAX_PHOTOS) {
+            newFiles.push(processedFile);
+            newPreviews.push(URL.createObjectURL(processedFile));
+          }
+        } else {
+          toast({
+            title: "Invalid File Type",
+            description: `File "${file.name}" is not a supported image type.`,
+            variant: "destructive",
+          });
+        }
+      } catch (error) {
+        console.error('Error processing file:', error);
         toast({
-          title: "Invalid File Type",
-          description: `File "${file.name}" is not a supported image type.`,
+          title: "Error Processing File",
+          description: `Could not process ${file.name}.`,
           variant: "destructive",
         });
       }
-    });
+    }
 
     setPhotoFilesToAdd(prev => [...prev, ...newFiles]);
     setPhotoPreviewsToAdd(prev => [...prev, ...newPreviews]);
