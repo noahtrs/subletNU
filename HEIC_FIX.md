@@ -19,35 +19,38 @@ Photo 1/4:
 
 ## Solution Implemented
 
-### 1. Installed HEIC Converter
-```bash
-npm install heic2any
-```
+### After Testing: Browser-based HEIC conversion is unreliable
 
-### 2. Updated CreateSubletPage.tsx
-- Added automatic HEIC to JPEG conversion when users select HEIC files
-- Shows toast notification during conversion
-- Converts with 90% quality to maintain image quality
-- Falls back to error message if conversion fails
+**Initial Approach (Failed):**
+- Tried using `heic2any` library for client-side conversion
+- **Problem**: Large HEIC files (>5MB) caused timeouts (30+ seconds)
+- **Problem**: Conversion was slow and unreliable in browser
 
-### 3. Updated EditSubletPage.tsx
-- Same HEIC conversion functionality for editing existing listings
+### Final Solution: Reject HEIC Files with Clear Instructions
+
+### 1. Updated CreateSubletPage.tsx
+- Detects HEIC files by extension and MIME type
+- Shows clear error message with instructions
+- Tells users how to fix the issue on their device
+
+### 2. Updated EditSubletPage.tsx
+- Same HEIC detection and rejection
 
 ## How It Works Now
 
-When a user uploads a HEIC file:
+When a user tries to upload a HEIC file:
 1. The app detects the HEIC format (by extension `.heic`/`.heif` or MIME type)
-2. Displays toast: "Converting HEIC Image..."
-3. Converts the HEIC file to JPEG format (90% quality)
-4. Renames the file from `.heic` to `.jpg`
-5. Displays toast: "Conversion Complete!"
-6. Uploads the JPEG version to Supabase storage
+2. **Rejects the file** before upload
+3. Shows a helpful toast notification:
+   - "HEIC Format Not Supported"
+   - "Please convert your photo to JPG or PNG before uploading"
+   - "On iPhone: Go to Settings > Camera > Formats and select 'Most Compatible'"
 
 ### User Experience:
-- **Transparent**: Automatic conversion, user doesn't need to do anything special
-- **Fast**: Conversion happens client-side before upload
-- **Compatible**: JPEG images work in all browsers
-- **Quality**: 90% quality setting preserves image fidelity
+- **Clear**: Users get immediate feedback about the issue
+- **Helpful**: Provides instructions on how to fix it
+- **Prevents issues**: Stops HEIC files from being uploaded to storage
+- **Fast**: No waiting for conversion that might fail
 
 ## Files Modified
 - `/src/pages/CreateSubletPage.tsx` - Added HEIC conversion

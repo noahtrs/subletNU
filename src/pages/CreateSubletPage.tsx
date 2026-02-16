@@ -7,7 +7,6 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Calendar } from "@/components/ui/calendar";
 import { ArrowLeft, CalendarIcon, ImagePlus, X, Menu as MenuIcon, Home, PlusCircle, MessageSquare, User } from "lucide-react";
-import heic2any from 'heic2any';
 import {
   Popover,
   PopoverContent,
@@ -216,6 +215,7 @@ const CreateSubletPage = () => {
   // Handle file selection
   const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
+    console.log('📤 File select triggered, files:', files);
     if (!files) return;
 
     const newFiles: File[] = [];
@@ -224,6 +224,7 @@ const CreateSubletPage = () => {
     const currentPhotoCount = photoFiles.length;
     const remainingSlots = 5 - currentPhotoCount;
     const filesToProcess = Array.from(files).slice(0, remainingSlots);
+    console.log(`📊 Processing ${filesToProcess.length} files, remaining slots: ${remainingSlots}`);
 
     if (files.length > remainingSlots) {
       toast({
@@ -234,54 +235,47 @@ const CreateSubletPage = () => {
     }
 
     for (const file of filesToProcess) {
+      console.log(`\n🖼️ Processing file: ${file.name}`);
+      console.log(`   Type: ${file.type}`);
+      console.log(`   Size: ${file.size} bytes`);
+      console.log(`   Extension: ${file.name.split('.').pop()}`);
+
       try {
         let processedFile = file;
 
-        // Check if file is HEIC/HEIF and convert to JPEG
-        if (file.type === 'image/heic' || file.type === 'image/heif' ||
-            file.name.toLowerCase().endsWith('.heic') || file.name.toLowerCase().endsWith('.heif')) {
+        // Check if file is HEIC/HEIF - reject these files
+        const isHeic = file.type === 'image/heic' || file.type === 'image/heif' ||
+                       file.name.toLowerCase().endsWith('.heic') || file.name.toLowerCase().endsWith('.heif');
 
+        console.log(`   Is HEIC? ${isHeic}`);
+
+        if (isHeic) {
+          console.log('❌ HEIC file detected - rejecting');
           toast({
-            title: "Converting HEIC Image",
-            description: `Converting ${file.name} to JPEG format...`,
+            title: "HEIC Format Not Supported",
+            description: "Please convert your photo to JPG or PNG before uploading. On iPhone: Go to Settings > Camera > Formats and select 'Most Compatible'.",
+            variant: "destructive",
+            duration: 10000,
           });
-
-          try {
-            const convertedBlob = await heic2any({
-              blob: file,
-              toType: 'image/jpeg',
-              quality: 0.9
-            });
-
-            // heic2any can return Blob or Blob[]
-            const blob = Array.isArray(convertedBlob) ? convertedBlob[0] : convertedBlob;
-
-            // Create a new File from the converted blob
-            const newFileName = file.name.replace(/\.(heic|heif)$/i, '.jpg');
-            processedFile = new File([blob], newFileName, { type: 'image/jpeg' });
-
-            toast({
-              title: "Conversion Complete",
-              description: `${file.name} converted to JPEG successfully!`,
-            });
-          } catch (conversionError) {
-            console.error('HEIC conversion error:', conversionError);
-            toast({
-              title: "Conversion Failed",
-              description: `Could not convert ${file.name}. Please use JPG or PNG instead.`,
-              variant: "destructive",
-            });
-            continue;
-          }
+          continue;
         }
 
         // Basic validation (e.g., type and size)
+        console.log(`   Processed file type: ${processedFile.type}`);
+        console.log(`   Starts with 'image/'? ${processedFile.type.startsWith('image/')}`);
+
         if (processedFile.type.startsWith('image/')) { // Check if it's an image
           if (photoFiles.length + newFiles.length < 5) {
+            console.log('✅ Adding file to upload list');
             newFiles.push(processedFile);
-            newPreviews.push(URL.createObjectURL(processedFile));
+            const previewUrl = URL.createObjectURL(processedFile);
+            console.log('   Preview URL created:', previewUrl);
+            newPreviews.push(previewUrl);
+          } else {
+            console.log('⚠️ Maximum photos reached');
           }
         } else {
+          console.log('❌ Invalid file type, rejected');
           toast({
             title: "Invalid File Type",
             description: `File "${file.name}" is not a supported image type.`,
@@ -289,7 +283,7 @@ const CreateSubletPage = () => {
           });
         }
       } catch (error) {
-        console.error('Error processing file:', error);
+        console.error('❌ Error processing file:', error);
         toast({
           title: "Error Processing File",
           description: `Could not process ${file.name}.`,
@@ -298,8 +292,19 @@ const CreateSubletPage = () => {
       }
     }
 
-    setPhotoFiles(prev => [...prev, ...newFiles]);
-    setPhotoPreviews(prev => [...prev, ...newPreviews]);
+    console.log(`\n📦 Total files to add: ${newFiles.length}`);
+    console.log(`📦 Total previews to add: ${newPreviews.length}`);
+
+    setPhotoFiles(prev => {
+      const updated = [...prev, ...newFiles];
+      console.log('📸 Updated photoFiles state:', updated.length, 'files');
+      return updated;
+    });
+    setPhotoPreviews(prev => {
+      const updated = [...prev, ...newPreviews];
+      console.log('🖼️ Updated photoPreviews state:', updated.length, 'previews');
+      return updated;
+    });
 
     // Clear the input value to allow selecting the same file again if needed
     if (fileInputRef.current) {
