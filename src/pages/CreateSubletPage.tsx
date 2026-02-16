@@ -215,7 +215,6 @@ const CreateSubletPage = () => {
   // Handle file selection
   const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
-    console.log('📤 File select triggered, files:', files);
     if (!files) return;
 
     const newFiles: File[] = [];
@@ -224,7 +223,6 @@ const CreateSubletPage = () => {
     const currentPhotoCount = photoFiles.length;
     const remainingSlots = 5 - currentPhotoCount;
     const filesToProcess = Array.from(files).slice(0, remainingSlots);
-    console.log(`📊 Processing ${filesToProcess.length} files, remaining slots: ${remainingSlots}`);
 
     if (files.length > remainingSlots) {
       toast({
@@ -235,22 +233,11 @@ const CreateSubletPage = () => {
     }
 
     for (const file of filesToProcess) {
-      console.log(`\n🖼️ Processing file: ${file.name}`);
-      console.log(`   Type: ${file.type}`);
-      console.log(`   Size: ${file.size} bytes`);
-      console.log(`   Extension: ${file.name.split('.').pop()}`);
-
       try {
-        let processedFile = file;
-
-        // Check if file is HEIC/HEIF - reject these files
         const isHeic = file.type === 'image/heic' || file.type === 'image/heif' ||
                        file.name.toLowerCase().endsWith('.heic') || file.name.toLowerCase().endsWith('.heif');
 
-        console.log(`   Is HEIC? ${isHeic}`);
-
         if (isHeic) {
-          console.log('❌ HEIC file detected - rejecting');
           toast({
             title: "HEIC Format Not Supported",
             description: "Please convert your photo to JPG or PNG before uploading. On iPhone: Go to Settings > Camera > Formats and select 'Most Compatible'.",
@@ -260,22 +247,12 @@ const CreateSubletPage = () => {
           continue;
         }
 
-        // Basic validation (e.g., type and size)
-        console.log(`   Processed file type: ${processedFile.type}`);
-        console.log(`   Starts with 'image/'? ${processedFile.type.startsWith('image/')}`);
-
-        if (processedFile.type.startsWith('image/')) { // Check if it's an image
+        if (file.type.startsWith('image/')) {
           if (photoFiles.length + newFiles.length < 5) {
-            console.log('✅ Adding file to upload list');
-            newFiles.push(processedFile);
-            const previewUrl = URL.createObjectURL(processedFile);
-            console.log('   Preview URL created:', previewUrl);
-            newPreviews.push(previewUrl);
-          } else {
-            console.log('⚠️ Maximum photos reached');
+            newFiles.push(file);
+            newPreviews.push(URL.createObjectURL(file));
           }
         } else {
-          console.log('❌ Invalid file type, rejected');
           toast({
             title: "Invalid File Type",
             description: `File "${file.name}" is not a supported image type.`,
@@ -283,7 +260,7 @@ const CreateSubletPage = () => {
           });
         }
       } catch (error) {
-        console.error('❌ Error processing file:', error);
+        console.error('Error processing file:', error);
         toast({
           title: "Error Processing File",
           description: `Could not process ${file.name}.`,
@@ -292,19 +269,8 @@ const CreateSubletPage = () => {
       }
     }
 
-    console.log(`\n📦 Total files to add: ${newFiles.length}`);
-    console.log(`📦 Total previews to add: ${newPreviews.length}`);
-
-    setPhotoFiles(prev => {
-      const updated = [...prev, ...newFiles];
-      console.log('📸 Updated photoFiles state:', updated.length, 'files');
-      return updated;
-    });
-    setPhotoPreviews(prev => {
-      const updated = [...prev, ...newPreviews];
-      console.log('🖼️ Updated photoPreviews state:', updated.length, 'previews');
-      return updated;
-    });
+    setPhotoFiles(prev => [...prev, ...newFiles]);
+    setPhotoPreviews(prev => [...prev, ...newPreviews]);
 
     // Clear the input value to allow selecting the same file again if needed
     if (fileInputRef.current) {

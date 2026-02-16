@@ -18,7 +18,6 @@ import ProfilePage from "./pages/ProfilePage";
 import NotFound from "./pages/NotFound";
 import ConfirmPage from "./pages/ConfirmPage";
 import SavedListingsPage from "./pages/SavedListingsPage";
-import DebugImagePage from "./pages/DebugImagePage";
 
 // Create a client
 const queryClient = new QueryClient();
@@ -43,7 +42,6 @@ const App = () => {
               <Route path="/edit/:subletId" element={<EditSubletPage />} />
               <Route path="/confirm" element={<ConfirmPage />} />
               <Route path="/saved-listings" element={<SavedListingsPage />} />
-              <Route path="/debug-images" element={<DebugImagePage />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </TooltipProvider>
