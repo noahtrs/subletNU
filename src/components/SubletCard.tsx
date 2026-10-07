@@ -231,9 +231,9 @@ const SubletCard = ({ sublet, expanded = false }: SubletCardProps) => {
         )}
       </div>
 
-      <div className={expanded ? "p-4" : "p-4"}>
+      <div className={expanded ? "p-4" : "p-4 lg:flex lg:flex-col lg:flex-1"}>
         {/* Top section: Price and badges */}
-        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2 sm:gap-0">
+        <div className={`flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2 sm:gap-0 ${expanded ? '' : 'lg:flex-col lg:gap-1'}`}>
           <div className="flex flex-col gap-1">
             <div className="text-xl font-bold text-neu-red">${sublet.price}/mo</div>
             <div className="flex flex-row flex-nowrap items-center gap-2">
@@ -242,13 +242,15 @@ const SubletCard = ({ sublet, expanded = false }: SubletCardProps) => {
             </div>
           </div>
           {/* Address, distance, and date info */}
-          <div className="text-sm text-gray-600 mt-1 sm:mt-0">
+          <div className={`text-sm text-gray-600 mt-1 sm:mt-0 ${expanded ? '' : 'lg:mt-1'}`}>
             {getShortAddress(sublet.location)} • {sublet.distanceFromNEU} mi from NU • {formatDateRange()}
           </div>
         </div>
         {/* Description */}
         <div className="mt-2 text-gray-800 text-sm">
-          {expanded ? formatDescription(sublet.description) : getTruncatedDescription()}
+          <div className={!expanded && !isDescriptionExpanded ? 'lg:line-clamp-4' : ''}>
+            {expanded ? formatDescription(sublet.description) : getTruncatedDescription()}
+          </div>
           {!expanded && shouldShowExpandButton() && (
             <Button
               variant="ghost"
@@ -270,7 +272,7 @@ const SubletCard = ({ sublet, expanded = false }: SubletCardProps) => {
         {/* Amenities */}
         {getAmenityBadges()}
         {/* Social/contact and message button */}
-        <div className="mt-4 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 sm:gap-0">
+        <div className={`mt-4 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 sm:gap-0 ${expanded ? '' : 'lg:mt-auto lg:pt-4 lg:flex-col lg:items-stretch lg:gap-2'}`}>
           <div className="text-sm text-gray-600">
             {(sublet.instagramHandle || sublet.snapchatHandle) ? (
               <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
@@ -306,7 +308,7 @@ const SubletCard = ({ sublet, expanded = false }: SubletCardProps) => {
           <Button
             variant="outline"
             size="sm"
-            className="text-neu-red border-neu-red hover:bg-neu-red hover:text-white w-full sm:w-auto mt-2 sm:mt-0"
+            className={`text-neu-red border-neu-red hover:bg-neu-red hover:text-white w-full sm:w-auto mt-2 sm:mt-0 ${expanded ? '' : 'lg:w-full'}`}
             onClick={handleMessageClick}
           >
             <MessageSquare size={16} className="mr-1" />

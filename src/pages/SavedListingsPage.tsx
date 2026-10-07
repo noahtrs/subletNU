@@ -84,7 +84,7 @@ const SavedListingsPage = () => {
               </Button>
             </div>
           ) : (
-            <div className="grid grid-cols-1 gap-4">
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-3 lg:gap-6">
               {savedListings.map((sublet) => (
                 <SubletCard key={sublet.id} sublet={sublet} />
               ))}

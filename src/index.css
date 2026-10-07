@@ -67,6 +67,20 @@
   @apply w-full h-full object-cover;
 }
 
+@media (min-width: 1024px) {
+  .sublet-card {
+    @apply w-full mx-0 mb-0 h-full flex flex-col;
+  }
+
+  .sublet-card .photo-carousel {
+    @apply h-auto aspect-[4/3];
+  }
+
+  .sublet-card .carousel-image {
+    @apply w-full h-full max-w-none max-h-none object-cover;
+  }
+}
+
 .bottom-nav {
   @apply fixed bottom-0 left-0 right-0 flex justify-around items-center h-16 bg-white border-t border-gray-200 z-50;
 }

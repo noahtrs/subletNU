@@ -45,18 +45,20 @@ const HomePage = () => {
                 <p className="text-gray-500">Try adjusting your filters or check back later.</p>
               </div>
             ) : (
-              <AnimatePresence initial={false}>
-                {filteredSublets.map((sublet) => (
-                  <motion.div
-                    key={sublet.id}
-                    layoutId={`sublet-card-${sublet.id}`}
-                    style={{ cursor: 'pointer' }}
-                    onClick={() => navigate(`/sublet/${sublet.id}`)}
-                  >
-                    <SubletCard sublet={sublet} />
-                  </motion.div>
-                ))}
-              </AnimatePresence>
+              <div className="lg:grid lg:grid-cols-3 lg:gap-6">
+                <AnimatePresence initial={false}>
+                  {filteredSublets.map((sublet) => (
+                    <motion.div
+                      key={sublet.id}
+                      layoutId={`sublet-card-${sublet.id}`}
+                      style={{ cursor: 'pointer' }}
+                      onClick={() => navigate(`/sublet/${sublet.id}`)}
+                    >
+                      <SubletCard sublet={sublet} />
+                    </motion.div>
+                  ))}
+                </AnimatePresence>
+              </div>
             )}
           </div>
           {/* CTA Section */}
