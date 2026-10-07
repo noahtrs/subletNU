@@ -34,7 +34,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           const appUser: User = {
             id: session.user.id,
             email: session.user.email || "",
-            verified: session.user.email_confirmed_at !== null
+            verified: !!session.user.email_confirmed_at
           };
           setCurrentUser(appUser);
         } else {
@@ -57,7 +57,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             const appUser: User = {
               id: user.id,
               email: user.email || "",
-              verified: user.email_confirmed_at !== null
+              verified: !!user.email_confirmed_at
             };
             setCurrentUser(appUser);
           } else {
@@ -74,7 +74,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   const login = async (email: string, password: string): Promise<boolean> => {
-    if (!email.endsWith('@northeastern.edu')) {
+    if (!email.trim().toLowerCase().endsWith('@northeastern.edu')) {
       toast({
         title: "Invalid Email",
         description: "You must use a northeastern.edu email address.",
@@ -85,7 +85,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     try {
       const { error } = await supabase.auth.signInWithPassword({
-        email,
+        email: email.trim(),
         password
       });
 
@@ -114,7 +114,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const register = async (email: string, password: string, metadata?: { first_name?: string; last_name?: string; notify_new_listings?: boolean; captcha_token?: string }): Promise<boolean> => {
-    if (!email.endsWith('@northeastern.edu')) {
+    if (!email.trim().toLowerCase().endsWith('@northeastern.edu')) {
       toast({
         title: "Invalid Email",
         description: "You must use a northeastern.edu email address.",
@@ -167,7 +167,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     try {
       const { error } = await supabase.auth.signUp({
-        email,
+        email: email.trim(),
         password,
         options: {
           data: {

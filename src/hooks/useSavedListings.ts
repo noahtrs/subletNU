@@ -77,7 +77,7 @@ export const useSavedListings = (): UseSavedListingsReturn => {
 
       // Transform the data to include saved_at timestamp and fetch user emails
       const listings = await Promise.all(
-        (data || []).map(async (item) => {
+        (data || []).filter((item) => item.sublets).map(async (item) => {
           const subletData = item.sublets;
           
           // Fetch the user email for this sublet

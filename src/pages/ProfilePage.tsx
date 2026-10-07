@@ -15,7 +15,7 @@ import Header from "@/components/Header";
 import { Switch } from "@/components/ui/switch";
 
 const ProfilePage = () => {
-  const { currentUser, logout } = useAuth();
+  const { currentUser, isLoadingAuth, logout } = useAuth();
   const [myListings, setMyListings] = useState<Sublet[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [userProfile, setUserProfile] = useState<{
@@ -29,13 +29,14 @@ const ProfilePage = () => {
   const [drawerOpen, setDrawerOpen] = useState(false);
 
   useEffect(() => {
+    if (isLoadingAuth) return;
     if (!currentUser) {
       navigate('/auth', { state: { fromProtected: true } });
     } else {
       fetchMyListings();
       fetchUserProfile();
     }
-  }, [currentUser, navigate]);
+  }, [currentUser, isLoadingAuth, navigate]);
 
   const fetchUserProfile = async () => {
     if (!currentUser) return;

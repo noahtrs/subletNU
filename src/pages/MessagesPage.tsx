@@ -22,7 +22,7 @@ type UserProfile = {
 
 const MessagesPage = () => {
   const { userId } = useParams<{ userId?: string }>();
-  const { currentUser } = useAuth();
+  const { currentUser, isLoadingAuth } = useAuth();
   const { sublets } = useSublet();
   const {
     messages,
@@ -44,7 +44,6 @@ const MessagesPage = () => {
 
   const [newMessage, setNewMessage] = useState("");
   const [activeUser, setActiveUser] = useState<string | null>(userId || null);
-  const [isFetching, setIsFetching] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
 
   const subletId = location.state?.subletId;
@@ -110,25 +109,17 @@ const MessagesPage = () => {
     }
   }, [userId, currentUser]);
 
-  // Fetch messages and profiles when opening a conversation
   useEffect(() => {
-    const fetchData = async () => {
-      if (!activeUser || isFetching || activeUser === currentUser?.id) return;
+    if (!activeUser || activeUser === currentUser?.id) return;
+    fetchMessages();
+  }, [activeUser, currentUser?.id, fetchMessages]);
 
-      setIsFetching(true);
-      try {
-        await Promise.all([
-          fetchUserProfiles([activeUser]),
-          fetchMessages(),
-          markMessagesAsRead(activeUser)
-        ]);
-      } finally {
-        setIsFetching(false);
-      }
-    };
-
-    fetchData();
-  }, [activeUser, currentUser?.id, fetchUserProfiles, fetchMessages, markMessagesAsRead, isFetching]);
+  const activeUnreadCount = activeUser ? getUnreadCount(activeUser) : 0;
+  useEffect(() => {
+    if (activeUser && activeUnreadCount > 0) {
+      markMessagesAsRead(activeUser);
+    }
+  }, [activeUser, activeUnreadCount, markMessagesAsRead]);
 
   // Fetch missing profiles for contacts
   useEffect(() => {
@@ -165,12 +156,13 @@ const MessagesPage = () => {
     }
   };
 
-  if (!currentUser) {
-    useEffect(() => {
+  useEffect(() => {
+    if (!isLoadingAuth && !currentUser) {
       navigate('/auth', { state: { fromProtected: true } });
-    }, [navigate, location]);
-    return null;
-  }
+    }
+  }, [isLoadingAuth, currentUser, navigate]);
+
+  if (!currentUser) return null;
 
   // Prevent rendering if trying to message self
   if (userId === currentUser.id) return null;

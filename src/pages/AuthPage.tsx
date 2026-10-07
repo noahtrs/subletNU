@@ -95,7 +95,7 @@ const AuthPage = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email.endsWith('@northeastern.edu')) {
+    if (!email.trim().toLowerCase().endsWith('@northeastern.edu')) {
       toast({
         title: "Invalid Email",
         description: "You must use a northeastern.edu email address.",

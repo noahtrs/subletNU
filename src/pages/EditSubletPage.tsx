@@ -29,8 +29,8 @@ const MAX_PHOTOS = 5; // Define max photos
 
 const EditSubletPage = () => {
   const { subletId } = useParams<{ subletId: string }>();
-  const { currentUser } = useAuth();
-  const { sublets, updateSublet, uploadPhoto } = useSublet();
+  const { currentUser, isLoadingAuth } = useAuth();
+  const { sublets, isLoadingSublets, updateSublet, uploadPhoto } = useSublet();
   const navigate = useNavigate();
 
   const sublet = sublets.find(s => s.id === subletId);
@@ -54,15 +54,19 @@ const EditSubletPage = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [instagramHandle, setInstagramHandle] = useState("");
   const [snapchatHandle, setSnapchatHandle] = useState("");
+  const hasInitializedForm = useRef(false);
 
   // Load sublet data
   useEffect(() => {
+    if (isLoadingAuth || isLoadingSublets || hasInitializedForm.current) return;
+
     if (!currentUser) {
       navigate('/auth', { state: { fromProtected: true } });
       return;
     }
 
-    if (sublet) {
+    if (sublet && sublet.userId === currentUser.id) {
+      hasInitializedForm.current = true;
       setPrice(String(sublet.price));
       setLocationInputValue(sublet.location);
       setDistanceFromNEU(String(sublet.distanceFromNEU));
@@ -86,15 +90,15 @@ const EditSubletPage = () => {
       });
       navigate('/profile');
     }
-  }, [currentUser, navigate, sublet]);
+  }, [currentUser, isLoadingAuth, isLoadingSublets, navigate, sublet]);
 
-  // Cleanup object URLs on unmount or when previews change
+  const photoPreviewsRef = useRef<string[]>([]);
+  photoPreviewsRef.current = photoPreviewsToAdd;
   useEffect(() => {
-    const previews = photoPreviewsToAdd; // Capture current previews
     return () => {
-      previews.forEach(URL.revokeObjectURL);
+      photoPreviewsRef.current.forEach(URL.revokeObjectURL);
     };
-  }, [photoPreviewsToAdd]);
+  }, []);
 
   // Calculate total cost based on price and date range
   const totalCost = useMemo(() => {
@@ -263,7 +267,7 @@ const EditSubletPage = () => {
       });
       return;
     }
-    if (isNaN(parseFloat(distanceFromNEU)) || parseFloat(distanceFromNEU) <= 0) {
+    if (isNaN(parseFloat(distanceFromNEU)) || parseFloat(distanceFromNEU) < 0) {
       toast({
         title: "Invalid Distance",
         description: "Please enter a valid distance from NEU",
@@ -330,11 +334,6 @@ const EditSubletPage = () => {
         snapchatHandle: snapchatHandle.trim() || null,
       });
 
-      toast({
-        title: "Listing Updated",
-        description: "Your listing has been successfully updated",
-      });
-
       navigate('/profile');
     } catch (error: any) {
       console.error("Error updating sublet:", error);
@@ -350,7 +349,7 @@ const EditSubletPage = () => {
 
   // Function to handle copying the link
   const handleShare = async () => {
-    const url = window.location.href;
+    const url = `${window.location.origin}/sublet/${subletId}`;
     try {
       await navigator.clipboard.writeText(url);
       toast({

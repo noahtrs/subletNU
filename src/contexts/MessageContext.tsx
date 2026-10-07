@@ -121,7 +121,7 @@ export const MessageProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [currentUser]);
 
-  const markMessagesAsRead = async (senderId: string) => {
+  const markMessagesAsRead = useCallback(async (senderId: string) => {
     if (!currentUser) return;
 
     try {
@@ -145,7 +145,7 @@ export const MessageProvider = ({ children }: { children: ReactNode }) => {
     } catch (error) {
       console.error('Failed to mark messages as read:', error);
     }
-  };
+  }, [currentUser]);
 
   const getUnreadCount = (userId: string): number => {
     if (!currentUser) return 0;
@@ -304,46 +304,24 @@ export const MessageProvider = ({ children }: { children: ReactNode }) => {
         throw error;
       }
 
-      // Call the notification edge function
       if (data) {
-        try {
-          console.log('Attempting to call notification function for message:', data.id);
-          const response = await fetch(
-            'https://vojxqyfkkkdxnbevnqmi.functions.supabase.co/send-message-notification',
-            {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZvanhxeWZra2tkeG5iZXZucW1pIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDM2MDYxODUsImV4cCI6MjA1OTE4MjE4NX0.ZU1uohCNE0RQrAwrxQJWyguxQAip_tnK1OU0skwRvEs',
-              },
-              body: JSON.stringify({ messageId: data.id }),
-            }
-          );
+        const sentMessage: ExtendedMessage = {
+          id: data.id,
+          senderId: data.sender_id,
+          receiverId: data.receiver_id,
+          text: data.text,
+          timestamp: data.created_at,
+          isRead: data.is_read,
+        };
+        setMessages((prev) =>
+          prev.find((m) => m.id === sentMessage.id) ? prev : [...prev, sentMessage]
+        );
 
-          console.log('Notification function response status:', response.status);
-
-          if (!response.ok) {
-            const errorText = await response.text();
-            console.error('Failed to trigger notification:', {
-              status: response.status,
-              statusText: response.statusText,
-              error: errorText,
-              messageId: data.id,
-              url: 'https://vojxqyfkkkdxnbevnqmi.functions.supabase.co/send-message-notification'
-            });
-          } else {
-            const responseData = await response.json();
-            console.log('Successfully triggered notification:', {
-              messageId: data.id,
-              response: responseData
-            });
-          }
-        } catch (notifyError) {
-          console.error('Error triggering notification:', {
-            error: notifyError,
-            messageId: data.id,
-            url: 'https://vojxqyfkkkdxnbevnqmi.functions.supabase.co/send-message-notification'
-          });
+        const { error: notifyError } = await supabase.functions.invoke('send-message-notification', {
+          body: { messageId: data.id },
+        });
+        if (notifyError) {
+          console.error('Failed to trigger notification:', notifyError);
         }
       }
     } catch (error) {
@@ -373,7 +351,7 @@ export const MessageProvider = ({ children }: { children: ReactNode }) => {
         return;
       }
 
-      if (data) {
+      if (data && data.length > 0) {
         const profiles = data.reduce((acc, profile) => ({
           ...acc,
           [profile.id]: profile

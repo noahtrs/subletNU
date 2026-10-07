@@ -264,10 +264,7 @@ const SubletDetailPage = () => {
     );
   }
 
-  // Demo amenities if none exist on the sublet
-  const amenities = sublet.amenities && sublet.amenities.length > 0
-    ? sublet.amenities
-    : ["High-speed WiFi", "Gym access", "24/7 security"];
+  const amenities = sublet.amenities ?? [];
 
   // Map amenities to corresponding icons
   const getAmenityIcon = (amenity: string) => {
@@ -342,6 +339,9 @@ const SubletDetailPage = () => {
 
           <div className="mt-6 bg-white rounded-lg shadow p-4">
             <h2 className="text-lg font-bold mb-3">Amenities</h2>
+            {amenities.length === 0 && !sublet.noBrokersFee && (
+              <p className="text-sm text-gray-500">No amenities listed.</p>
+            )}
             <div className="grid grid-cols-2 gap-2">
               {amenities.map((amenity, index) => {
                 const icon = getAmenityIcon(amenity);

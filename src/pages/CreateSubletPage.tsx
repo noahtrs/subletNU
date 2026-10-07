@@ -44,7 +44,7 @@ declare global {
 
 const CreateSubletPage = () => {
   const { currentUser } = useAuth();
-  const { addSublet, uploadPhoto } = useSublet();
+  const { uploadPhoto } = useSublet();
   const navigate = useNavigate();
 
   const [price, setPrice] = useState("");
@@ -100,13 +100,13 @@ const CreateSubletPage = () => {
     return () => clearTimeout(timeout);
   }, [useNewAutocomplete]);
 
-  // Cleanup object URLs on unmount or when files change
+  const photoPreviewsRef = useRef<string[]>([]);
+  photoPreviewsRef.current = photoPreviews;
   useEffect(() => {
-    const previews = photoPreviews; // Capture current previews
     return () => {
-      previews.forEach(URL.revokeObjectURL);
+      photoPreviewsRef.current.forEach(URL.revokeObjectURL);
     };
-  }, [photoFiles]); // Depend on photoFiles to trigger cleanup when files change
+  }, []);
 
   // Calculate total cost based on price and date range
   const totalCost = useMemo(() => {
@@ -392,6 +392,22 @@ const CreateSubletPage = () => {
       });
       return;
     }
+    if (endDate <= startDate) {
+      toast({
+        title: "Invalid Date Range",
+        description: "End date must be after start date.",
+        variant: "destructive",
+      });
+      return;
+    }
+    if (isNaN(parseFloat(price)) || parseFloat(price) <= 0) {
+      toast({
+        title: "Invalid Price",
+        description: "Please enter a valid price.",
+        variant: "destructive",
+      });
+      return;
+    }
     if (photoFiles.length === 0) {
       toast({
         title: "No Photos",
@@ -532,6 +548,7 @@ const CreateSubletPage = () => {
   };
 
   useEffect(() => {
+    let timer: ReturnType<typeof setTimeout>;
     function checkReady() {
       if (
         (window as any).google &&
@@ -540,10 +557,11 @@ const CreateSubletPage = () => {
       ) {
         setMapsReady(true);
       } else {
-        setTimeout(checkReady, 200);
+        timer = setTimeout(checkReady, 200);
       }
     }
     checkReady();
+    return () => clearTimeout(timer);
   }, []);
 
   const isMobile = useIsMobile();
@@ -558,31 +576,6 @@ const CreateSubletPage = () => {
       <ArrowLeft />
     </button>
   );
-
-  // Add this function to get the newly created sublet
-  const getNewlyCreatedSublet = async () => {
-    try {
-      // Access the sublets directly from context
-      const { sublets } = useSublet();
-
-      // Find the most recently created sublet by the current user
-      if (sublets && Array.isArray(sublets)) {
-        const userSublets = sublets.filter(
-          s => s.userId === currentUser?.id
-        );
-
-        // Sort by creation time, newest first
-        const sortedSublets = userSublets.sort((a, b) =>
-          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-        );
-
-        return sortedSublets[0]; // Return the newest sublet
-      }
-    } catch (error) {
-      console.error("Error fetching newly created sublet:", error);
-    }
-    return null;
-  };
 
   return (
     <div className="flex flex-col min-h-screen">
