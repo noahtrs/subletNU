@@ -6,6 +6,7 @@ import { ChevronLeft, ChevronRight, MessageSquare, ChevronDown, ChevronUp } from
 import { format } from "date-fns";
 import { useNavigate } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
+import { formatPostedDate } from "@/lib/utils";
 import Lightbox from "yet-another-react-lightbox";
 import "yet-another-react-lightbox/styles.css"; // Import lightbox styles
 
@@ -85,6 +86,8 @@ const SubletCard = ({ sublet, expanded = false }: SubletCardProps) => {
     const end = new Date(sublet.endDate);
     return `${format(start, "MMM d")} - ${format(end, "MMM d")}`;
   };
+
+  const posted = formatPostedDate(sublet.createdAt);
 
   const getGenderBadge = () => {
     const genderInfo = {
@@ -243,7 +246,14 @@ const SubletCard = ({ sublet, expanded = false }: SubletCardProps) => {
           </div>
           {/* Address, distance, and date info */}
           <div className={`text-sm text-gray-600 mt-1 sm:mt-0 ${expanded ? '' : 'lg:mt-1'}`}>
-            {getShortAddress(sublet.location)} • {sublet.distanceFromNEU} mi from NU • {formatDateRange()}
+            <div>
+              {getShortAddress(sublet.location)} • {sublet.distanceFromNEU} mi from NU • {formatDateRange()}
+            </div>
+            {posted && (
+              <div className="text-xs text-gray-400 mt-0.5" title={posted.absolute}>
+                {expanded ? `Posted ${posted.absolute} (${posted.relative})` : `Posted ${posted.relative}`}
+              </div>
+            )}
           </div>
         </div>
         {/* Description */}
