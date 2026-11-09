@@ -3,7 +3,7 @@ import { Sublet } from "../types";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight, MessageSquare, ChevronDown, ChevronUp } from "lucide-react";
-import { formatSubletDateRange, isSubletExpired } from "@/lib/utils";
+import { formatPostedDate, formatSubletDateRange, isSubletExpired } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import Lightbox from "yet-another-react-lightbox";
@@ -82,6 +82,8 @@ const SubletCard = ({ sublet, expanded = false }: SubletCardProps) => {
 
   const formatDateRange = () => formatSubletDateRange(sublet.startDate, sublet.endDate);
   const isExpired = isSubletExpired(sublet.endDate);
+
+  const posted = formatPostedDate(sublet.createdAt);
 
   const getGenderBadge = () => {
     const genderInfo = {
@@ -248,7 +250,14 @@ const SubletCard = ({ sublet, expanded = false }: SubletCardProps) => {
           </div>
           {/* Address, distance, and date info */}
           <div className={`text-sm text-gray-600 mt-1 sm:mt-0 ${expanded ? '' : 'lg:mt-1'}`}>
-            {getShortAddress(sublet.location)} • {sublet.distanceFromNEU} mi from NU • {formatDateRange()}
+            <div>
+              {getShortAddress(sublet.location)} • {sublet.distanceFromNEU} mi from NU • {formatDateRange()}
+            </div>
+            {posted && (
+              <div className="text-xs text-gray-400 mt-0.5" title={posted.absolute}>
+                {expanded ? `Posted ${posted.absolute} (${posted.relative})` : `Posted ${posted.relative}`}
+              </div>
+            )}
           </div>
         </div>
         {/* Description */}

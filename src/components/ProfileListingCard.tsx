@@ -2,7 +2,7 @@ import { Sublet } from "../types";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { formatSubletDateRange, isSubletExpired } from "@/lib/utils";
+import { formatPostedDate, formatSubletDateRange, isSubletExpired } from "@/lib/utils";
 import { Edit, Trash2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
@@ -37,6 +37,8 @@ const ProfileListingCard = ({ sublet, onDelete, onEdit }: ProfileListingCardProp
 
   const formatDateRange = () => formatSubletDateRange(sublet.startDate, sublet.endDate);
   const isExpired = isSubletExpired(sublet.endDate);
+
+  const posted = formatPostedDate(sublet.createdAt);
 
   return (
     <Card
@@ -76,6 +78,12 @@ const ProfileListingCard = ({ sublet, onDelete, onEdit }: ProfileListingCardProp
           <div className="text-sm text-gray-600 mt-1">
             {sublet.distanceFromNEU} mi from NEU • {formatDateRange()}
           </div>
+
+          {posted && (
+            <div className="text-xs text-gray-400 mt-0.5" title={posted.absolute}>
+              Posted {posted.relative}
+            </div>
+          )}
 
           <p className="text-sm text-gray-800 line-clamp-1 mt-1">
             {sublet.description}
