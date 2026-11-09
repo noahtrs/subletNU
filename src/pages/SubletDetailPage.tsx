@@ -20,6 +20,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Sublet } from "@/types";
 import { motion } from "framer-motion";
 import { useSavedListings } from '@/hooks/useSavedListings';
+import { isSubletExpired } from "@/lib/utils";
 
 // Define type for coordinates
 interface Coordinates {
@@ -333,6 +334,11 @@ const SubletDetailPage = () => {
       </div>
       <div className="pb-20 max-w-2xl mx-auto">
         <div className="p-4">
+          {isSubletExpired(sublet.endDate) && (
+            <div className="mb-4 rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm text-gray-700">
+              This sublet's dates have passed, so it's no longer listed in search.
+            </div>
+          )}
           <motion.div layoutId={`sublet-card-${sublet.id}`}>
             <SubletCard sublet={sublet} expanded={true} />
           </motion.div>

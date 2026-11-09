@@ -7,6 +7,7 @@ import BottomNav from '@/components/BottomNav';
 import { Loader2, HeartCrack, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { isSubletExpired } from '@/lib/utils';
 
 const SavedListingsPage = () => {
   const { currentUser, isLoadingAuth } = useAuth();
@@ -14,6 +15,11 @@ const SavedListingsPage = () => {
   const isMobile = useIsMobile();
 
   const { savedListings, isLoading, error, refetch } = useSavedListings();
+  // Keep listings whose dates have passed, but show them after active ones.
+  const sortedListings = [
+    ...savedListings.filter((s) => !isSubletExpired(s.endDate)),
+    ...savedListings.filter((s) => isSubletExpired(s.endDate)),
+  ];
 
   if (isLoadingAuth || isLoading) {
     return (
@@ -85,7 +91,7 @@ const SavedListingsPage = () => {
             </div>
           ) : (
             <div className="grid grid-cols-1 gap-4 lg:grid-cols-3 lg:gap-6">
-              {savedListings.map((sublet) => (
+              {sortedListings.map((sublet) => (
                 <SubletCard key={sublet.id} sublet={sublet} />
               ))}
             </div>
