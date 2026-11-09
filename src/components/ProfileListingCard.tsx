@@ -2,7 +2,7 @@ import { Sublet } from "../types";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { format } from "date-fns";
+import { formatSubletDateRange, isSubletExpired } from "@/lib/utils";
 import { Edit, Trash2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
@@ -35,11 +35,8 @@ const ProfileListingCard = ({ sublet, onDelete, onEdit }: ProfileListingCardProp
     }
   };
 
-  const formatDateRange = () => {
-    const start = new Date(sublet.startDate);
-    const end = new Date(sublet.endDate);
-    return `${format(start, "MMM d")} - ${format(end, "MMM d")}`;
-  };
+  const formatDateRange = () => formatSubletDateRange(sublet.startDate, sublet.endDate);
+  const isExpired = isSubletExpired(sublet.endDate);
 
   return (
     <Card
@@ -57,7 +54,17 @@ const ProfileListingCard = ({ sublet, onDelete, onEdit }: ProfileListingCardProp
 
         <div className="flex-1">
           <div className="flex justify-between">
-            <div className="font-bold text-neu-red">${sublet.price}/mo</div>
+            <div className="flex items-center gap-2">
+              <div className="font-bold text-neu-red">${sublet.price}/mo</div>
+              {isExpired && (
+                <Badge
+                  variant="outline"
+                  className="bg-gray-700 hover:bg-gray-700 border-none text-white font-medium"
+                >
+                  Expired
+                </Badge>
+              )}
+            </div>
             <Badge
               variant="outline"
               className={`${sublet.pricingType === 'negotiable' ? 'bg-green-100 hover:bg-green-100' : 'bg-gray-100 hover:bg-gray-100'} border-none text-gray-700 font-medium`}
@@ -73,6 +80,12 @@ const ProfileListingCard = ({ sublet, onDelete, onEdit }: ProfileListingCardProp
           <p className="text-sm text-gray-800 line-clamp-1 mt-1">
             {sublet.description}
           </p>
+
+          {isExpired && (
+            <p className="text-xs text-gray-500 mt-1">
+              This listing's dates have passed, so it's hidden from search. Edit the dates to relist it, or delete it.
+            </p>
+          )}
 
           {/* Add Social Media Handles Display */}
           <div className="flex flex-wrap gap-x-2 gap-y-1 text-xs text-gray-500 mt-2">

@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, ReactNode } from "react";
 import { Sublet } from "../types";
 import { useSublet } from "./SubletContext";
+import { isSubletExpired } from "@/lib/utils";
 
 type FilterContextType = {
   filteredSublets: Sublet[];
@@ -36,6 +37,10 @@ export const FilterProvider = ({ children }: { children: ReactNode }) => {
   const filteredSublets = isLoadingSublets || !sublets
     ? []
     : sublets.filter((sublet) => {
+      // Listings whose dates have passed stay in the DB (owners can still see,
+      // edit, or relist them) but are hidden from browsing.
+      if (isSubletExpired(sublet.endDate)) return false;
+
       const priceFilter = sublet.price <= maxPrice;
       const distanceFilter = sublet.distanceFromNEU <= maxDistance;
 
