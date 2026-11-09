@@ -3,10 +3,9 @@ import { Sublet } from "../types";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight, MessageSquare, ChevronDown, ChevronUp } from "lucide-react";
-import { format } from "date-fns";
+import { formatPostedDate, formatSubletDateRange, isSubletExpired } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
-import { formatPostedDate } from "@/lib/utils";
 import Lightbox from "yet-another-react-lightbox";
 import "yet-another-react-lightbox/styles.css"; // Import lightbox styles
 
@@ -81,11 +80,8 @@ const SubletCard = ({ sublet, expanded = false }: SubletCardProps) => {
     navigate(`/messages/${sublet.userId}`, { state: { subletId: sublet.id } });
   };
 
-  const formatDateRange = () => {
-    const start = new Date(sublet.startDate);
-    const end = new Date(sublet.endDate);
-    return `${format(start, "MMM d")} - ${format(end, "MMM d")}`;
-  };
+  const formatDateRange = () => formatSubletDateRange(sublet.startDate, sublet.endDate);
+  const isExpired = isSubletExpired(sublet.endDate);
 
   const posted = formatPostedDate(sublet.createdAt);
 
@@ -240,6 +236,14 @@ const SubletCard = ({ sublet, expanded = false }: SubletCardProps) => {
           <div className="flex flex-col gap-1">
             <div className="text-xl font-bold text-neu-red">${sublet.price}/mo</div>
             <div className="flex flex-row flex-nowrap items-center gap-2">
+              {isExpired && (
+                <Badge
+                  variant="outline"
+                  className="bg-gray-700 hover:bg-gray-700 border-none text-white font-medium inline-flex w-auto whitespace-nowrap px-2 py-0.5"
+                >
+                  Expired
+                </Badge>
+              )}
               {getGenderBadge()}
               {getPricingBadge()}
             </div>
