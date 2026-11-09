@@ -75,26 +75,27 @@ export const useSavedListings = (): UseSavedListingsReturn => {
 
       if (error) throw error;
 
-      // Transform the data to include saved_at timestamp and fetch user emails
-      const listings = await Promise.all(
-        (data || []).filter((item) => item.sublets).map(async (item) => {
-          const subletData = item.sublets;
-          
-          // Fetch the user email for this sublet
-          const { data: profileData } = await supabase
-            .from('profiles')
-            .select('email')
-            .eq('id', subletData.user_id)
-            .single();
-          
-          const userEmail = profileData?.email || "unknown@northeastern.edu";
-          
-          return transformSubletData(
-            subletData, 
-            userEmail,
-            item.created_at
-          );
-        })
+      const rows = (data || []).filter((item) => item.sublets);
+
+      // Fetch all posters' emails in one query rather than one per listing.
+      const userIds = [...new Set(rows.map((item) => item.sublets.user_id))];
+      const emailById = new Map<string, string>();
+      if (userIds.length > 0) {
+        const { data: profiles } = await supabase
+          .from('profiles')
+          .select('id, email')
+          .in('id', userIds);
+        profiles?.forEach((profile) => {
+          if (profile.email) emailById.set(profile.id, profile.email);
+        });
+      }
+
+      const listings = rows.map((item) =>
+        transformSubletData(
+          item.sublets,
+          emailById.get(item.sublets.user_id) || "unknown@northeastern.edu",
+          item.created_at
+        )
       );
 
       setSavedListings(listings);

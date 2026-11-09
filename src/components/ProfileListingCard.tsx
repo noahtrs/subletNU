@@ -51,6 +51,8 @@ const ProfileListingCard = ({ sublet, onDelete, onEdit }: ProfileListingCardProp
             src={sublet.photos[0]}
             alt={sublet.location}
             className="w-full h-full object-cover"
+            loading="lazy"
+            decoding="async"
           />
         </div>
 

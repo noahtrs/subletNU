@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Sublet } from "../types";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -14,6 +14,13 @@ interface SubletCardProps {
   expanded?: boolean;
 }
 
+const getAspectRatioClass = (width: number, height: number): string => {
+  const ratio = width / height;
+  if (ratio > 1.2) return 'aspect-video'; // Wider than 5:4 -> Landscape (16:9)
+  if (ratio < 0.8) return 'aspect-[3/4]'; // Taller than 4:5 -> Portrait
+  return 'aspect-square'; // Close to square
+};
+
 // Utility function to get the short address (e.g., "123 Main St")
 const getShortAddress = (fullAddress: string): string => {
   if (!fullAddress) return "";
@@ -27,10 +34,49 @@ const SubletCard = ({ sublet, expanded = false }: SubletCardProps) => {
   const [aspectRatioClass, setAspectRatioClass] = useState('aspect-video'); // Default to landscape
   const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
   const navigate = useNavigate();
+  // Aspect ratio per photo URL, filled in as photos load or preload, so flipping
+  // between photos doesn't reset the frame and jump the layout.
+  const aspectRatioByUrl = useRef<Record<string, string>>({});
+  const preloadedUrls = useRef<Set<string>>(new Set());
 
+  const preloadPhoto = useCallback((url: string | undefined) => {
+    if (!url || preloadedUrls.current.has(url)) return;
+    preloadedUrls.current.add(url);
+    const img = new Image();
+    img.decoding = 'async';
+    img.onload = () => {
+      if (img.naturalWidth && img.naturalHeight) {
+        aspectRatioByUrl.current[url] = getAspectRatioClass(img.naturalWidth, img.naturalHeight);
+      }
+    };
+    img.src = url;
+  }, []);
+
+  // When the photo changes, use its known aspect ratio (if already loaded) and
+  // warm the cache for its neighbours so the next flip is instant.
   useEffect(() => {
-    setAspectRatioClass('aspect-video');
-  }, [currentPhotoIndex]);
+    const url = sublet.photos[currentPhotoIndex];
+    const known = url && aspectRatioByUrl.current[url];
+    if (known) setAspectRatioClass(known);
+
+    // In the grid, wait until the user has flipped (or hovered, below) so the
+    // initial page load only fetches each card's cover photo.
+    if (expanded || currentPhotoIndex > 0) {
+      preloadPhoto(sublet.photos[currentPhotoIndex + 1]);
+      preloadPhoto(sublet.photos[currentPhotoIndex - 1]);
+    }
+  }, [currentPhotoIndex, sublet.photos, preloadPhoto, expanded]);
+
+  // On the detail page the user is likely to view every photo, so fetch them all.
+  useEffect(() => {
+    if (expanded) sublet.photos.forEach(preloadPhoto);
+  }, [expanded, sublet.photos, preloadPhoto]);
+
+  // In the grid, start fetching the second photo once the user shows interest
+  // (pointerenter also fires on touch, just before the tap on the arrow).
+  const handlePointerEnter = () => {
+    preloadPhoto(sublet.photos[currentPhotoIndex + 1]);
+  };
 
   const handleNextPhoto = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -57,16 +103,11 @@ const SubletCard = ({ sublet, expanded = false }: SubletCardProps) => {
   };
 
   const handleImageLoad = (event: React.SyntheticEvent<HTMLImageElement, Event>) => {
-    const { naturalWidth, naturalHeight } = event.currentTarget;
-    const ratio = naturalWidth / naturalHeight;
-
-    if (ratio > 1.2) { // Wider than 5:4 -> Landscape
-      setAspectRatioClass('aspect-video'); // 16:9
-    } else if (ratio < 0.8) { // Taller than 4:5 -> Portrait
-      setAspectRatioClass('aspect-[3/4]'); // 3:4
-    } else { // Close to square
-      setAspectRatioClass('aspect-square'); // 1:1
-    }
+    const { naturalWidth, naturalHeight, currentSrc, src } = event.currentTarget;
+    if (!naturalWidth || !naturalHeight) return;
+    const ratioClass = getAspectRatioClass(naturalWidth, naturalHeight);
+    aspectRatioByUrl.current[src || currentSrc] = ratioClass;
+    setAspectRatioClass(ratioClass);
   };
 
   const handleCardClick = () => {
@@ -191,17 +232,22 @@ const SubletCard = ({ sublet, expanded = false }: SubletCardProps) => {
   // Define the content to be rendered
   const cardContent = (
     <>
-      <div className={`photo-carousel relative w-full overflow-hidden ${aspectRatioClass} ${expanded ? 'rounded-t-lg' : 'rounded-t-md'} bg-gray-100 flex items-center justify-center`}>
+      <div
+        className={`photo-carousel relative w-full overflow-hidden ${aspectRatioClass} ${expanded ? 'rounded-t-lg' : 'rounded-t-md'} bg-gray-100 flex items-center justify-center`}
+        onPointerEnter={sublet.photos.length > 1 ? handlePointerEnter : undefined}
+      >
         <div
           onClick={expanded ? handleImageClick : undefined} // Attach click handler only when expanded
           className={`cursor-${expanded ? 'pointer' : 'default'} w-full h-full flex items-center justify-center`}
         >
           <img
-            key={sublet.photos[currentPhotoIndex]}
             src={sublet.photos[currentPhotoIndex]}
             alt={`Sublet at ${sublet.location}`}
             className={`carousel-image object-contain max-w-full max-h-full`}
             onLoad={handleImageLoad}
+            // Grid cards below the fold shouldn't compete with the ones on screen.
+            loading={expanded ? "eager" : "lazy"}
+            decoding="async"
           />
         </div>
 

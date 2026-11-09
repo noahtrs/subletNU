@@ -124,7 +124,8 @@ const SubletDetailPage = () => {
 
   // Use either the context sublet or directly fetched sublet
   const sublet = contextSublet || directSublet;
-  const isLoading = isLoadingSublets || isLoadingDirectSublet;
+  // Render as soon as we have the listing (possibly from the cached list).
+  const isLoading = !sublet && (isLoadingSublets || isLoadingDirectSublet);
 
   const googleMapsApiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string; // Key for Maps JS API (InteractiveMap, Autocomplete)
   const geocodeApiKey = import.meta.env.VITE_GEOCODE_API_KEY as string; // Dedicated key for Geocoding API fetch call

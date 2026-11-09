@@ -3,6 +3,7 @@ import { Sublet } from "../types";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "./AuthContext";
+import { compressImage } from "@/lib/imageCompression";
 
 type SubletContextType = {
   sublets: Sublet[];
@@ -14,13 +15,37 @@ type SubletContextType = {
 
 const SubletContext = createContext<SubletContextType | undefined>(undefined);
 
+const CACHE_KEY = 'subletnu:sublets:v1';
+
+// Last fetched listings, so returning visitors see the grid immediately while a
+// fresh copy loads in the background.
+const readCachedSublets = (): Sublet[] | null => {
+  try {
+    const raw = localStorage.getItem(CACHE_KEY);
+    const parsed = raw ? JSON.parse(raw) : null;
+    return Array.isArray(parsed) ? parsed : null;
+  } catch {
+    return null;
+  }
+};
+
+const writeCachedSublets = (sublets: Sublet[]) => {
+  try {
+    localStorage.setItem(CACHE_KEY, JSON.stringify(sublets));
+  } catch {
+    // Storage full or unavailable (private mode) — caching is best-effort.
+  }
+};
+
 export const SubletProvider = ({ children }: { children: ReactNode }) => {
-  const [sublets, setSublets] = useState<Sublet[]>([]);
+  const [sublets, setSublets] = useState<Sublet[]>(() => readCachedSublets() ?? []);
+  // True until the first fresh fetch finishes. `sublets` may already hold cached
+  // listings during that time; pages that act on a listing (edit, detail) should
+  // keep waiting on this, while the browse grid can render the cached copy.
   const [isLoadingSublets, setIsLoadingSublets] = useState(true);
   const { currentUser } = useAuth();
 
   const fetchSublets = async () => {
-    setIsLoadingSublets(true);
     try {
       const { data, error } = await supabase
         .from('sublets')
@@ -32,48 +57,53 @@ export const SubletProvider = ({ children }: { children: ReactNode }) => {
         .order('created_at', { ascending: false });
 
       if (error) {
+        // Keep whatever is on screen rather than blanking the page.
         console.error('Error fetching sublets:', error);
-        setSublets([]);
         return;
       }
 
-      if (data) {
-        const subletsWithEmails: Sublet[] = await Promise.all(
-          data.map(async (item) => {
-            const { data: profileData } = await supabase
-              .from('profiles')
-              .select('email')
-              .eq('id', item.user_id)
-              .single();
+      const rows = data ?? [];
 
-            return {
-              id: item.id,
-              userId: item.user_id,
-              userEmail: profileData?.email || "unknown@northeastern.edu",
-              price: item.price,
-              location: item.location,
-              distanceFromNEU: item.distance_from_neu,
-              startDate: item.start_date,
-              endDate: item.end_date,
-              description: item.description,
-              photos: item.photos,
-              createdAt: item.created_at,
-              genderPreference: item.gender_preference as "male" | "female" | "any",
-              pricingType: item.pricing_type as "firm" | "negotiable",
-              amenities: item.amenities || [],
-              noBrokersFee: item.no_brokers_fee || false,
-              instagramHandle: item.instagram_handle,
-              snapchatHandle: item.snapchat_handle,
-            };
-          })
-        );
-        setSublets(subletsWithEmails);
-      } else {
-        setSublets([]);
+      // One query for all posters' emails instead of one request per listing.
+      const userIds = [...new Set(rows.map((item) => item.user_id))];
+      const emailById = new Map<string, string>();
+      if (userIds.length > 0) {
+        const { data: profiles, error: profilesError } = await supabase
+          .from('profiles')
+          .select('id, email')
+          .in('id', userIds);
+        if (profilesError) {
+          console.error('Error fetching listing profiles:', profilesError);
+        }
+        profiles?.forEach((profile) => {
+          if (profile.email) emailById.set(profile.id, profile.email);
+        });
       }
+
+      const mapped: Sublet[] = rows.map((item) => ({
+        id: item.id,
+        userId: item.user_id,
+        userEmail: emailById.get(item.user_id) || "unknown@northeastern.edu",
+        price: item.price,
+        location: item.location,
+        distanceFromNEU: item.distance_from_neu,
+        startDate: item.start_date,
+        endDate: item.end_date,
+        description: item.description,
+        photos: item.photos,
+        createdAt: item.created_at,
+        genderPreference: item.gender_preference as "male" | "female" | "any",
+        pricingType: item.pricing_type as "firm" | "negotiable",
+        amenities: item.amenities || [],
+        noBrokersFee: item.no_brokers_fee || false,
+        instagramHandle: item.instagram_handle,
+        snapchatHandle: item.snapchat_handle,
+      }));
+
+      setSublets(mapped);
+      writeCachedSublets(mapped);
     } catch (error) {
       console.error('Failed to fetch sublets:', error);
-      setSublets([]);
     } finally {
       setIsLoadingSublets(false);
     }
@@ -82,28 +112,31 @@ export const SubletProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     fetchSublets();
 
+    // Coalesce bursts of realtime events (e.g. a listing edit touching several
+    // rows) into a single refetch.
+    let refetchTimer: ReturnType<typeof setTimeout> | undefined;
+    const scheduleRefetch = () => {
+      clearTimeout(refetchTimer);
+      refetchTimer = setTimeout(fetchSublets, 300);
+    };
+
     const channel = supabase
       .channel('public:sublets')
       .on('postgres_changes',
         { event: '*', schema: 'public', table: 'sublets' },
-        (payload) => {
-          fetchSublets();
-        }
+        scheduleRefetch
       )
       .subscribe((status, err) => {
-        if (status === 'SUBSCRIBED') {
-        }
         if (status === 'CHANNEL_ERROR') {
           console.error('Subscription channel error:', err);
         }
         if (status === 'TIMED_OUT') {
           console.error('Subscription timed out');
         }
-        if (status === 'CLOSED') {
-        }
       });
 
     return () => {
+      clearTimeout(refetchTimer);
       supabase.removeChannel(channel);
     };
   }, []);
@@ -218,15 +251,20 @@ export const SubletProvider = ({ children }: { children: ReactNode }) => {
       return null;
     }
 
-    const fileExt = file.name.split('.').pop();
+    // Shrink phone-sized photos before upload so listings load quickly.
+    const uploadFile = await compressImage(file);
+
+    const fileExt = uploadFile.name.split('.').pop();
     const fileName = `${Date.now()}_${Math.random().toString(36).substring(2)}.${fileExt}`;
     const filePath = `${userId}/${fileName}`;
 
     try {
       const { error: uploadError } = await supabase.storage
         .from('sublet-photos')
-        .upload(filePath, file, {
-          cacheControl: '3600',
+        .upload(filePath, uploadFile, {
+          // File names are unique and never overwritten, so browsers/CDN can cache them for a year.
+          cacheControl: '31536000',
+          contentType: uploadFile.type,
           upsert: false,
         });
 
