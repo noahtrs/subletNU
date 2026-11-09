@@ -17,8 +17,12 @@
 // Setup (sharp is not a project dependency, so deploys stay lean):
 //   npm install --no-save sharp
 //   # .env (gitignored) needs:
-//   #   VITE_SUPABASE_URL=https://<ref>.supabase.co
-//   #   SUPABASE_SERVICE_ROLE_KEY=<service role key>   (Supabase dashboard → Project Settings → API)
+//   #   VITE_SUPABASE_URL=https://<ref>.supabase.co     (or SUPABASE_URL)
+//   #   SUPABASE_SECRET_KEY=sb_secret_...               (Dashboard → Settings → API Keys)
+//   # The secret key bypasses Row Level Security, which the script needs to update
+//   # other users' listings. Never give it a VITE_ prefix (Vite can ship VITE_* vars
+//   # to the browser). The legacy service_role JWT in SUPABASE_SERVICE_ROLE_KEY is
+//   # also accepted, but Supabase is deprecating it by the end of 2026.
 //
 // Usage:
 //   node scripts/compress-existing-photos.mjs                     # dry run, all listings
@@ -74,14 +78,35 @@ try {
 }
 
 const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
-const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-if (!supabaseUrl || !serviceRoleKey) {
-  console.error('Missing VITE_SUPABASE_URL (or SUPABASE_URL) or SUPABASE_SERVICE_ROLE_KEY in .env');
-  console.error('Do not prefix the service role key with VITE_ — Vite can bundle VITE_* vars into the public site.');
+const secretKey = process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
+if (!supabaseUrl || !secretKey) {
+  console.error('Missing VITE_SUPABASE_URL (or SUPABASE_URL) or SUPABASE_SECRET_KEY in .env.');
+  console.error('Create/copy a secret key (sb_secret_...) under Settings → API Keys in the Supabase dashboard.');
   process.exit(1);
 }
 
-const supabase = createClient(supabaseUrl, serviceRoleKey, {
+/** Role claimed by a legacy JWT key (anon / service_role), or null if it isn't one. */
+const legacyJwtRole = (key) => {
+  if (!key.startsWith('eyJ')) return null;
+  try {
+    return JSON.parse(Buffer.from(key.split('.')[1], 'base64url').toString()).role ?? null;
+  } catch {
+    return null;
+  }
+};
+
+// A publishable/anon key would let the dry run "succeed" (listings and photos
+// are public) and then fail on every write, so reject it up front.
+if (secretKey.startsWith('sb_publishable_') || legacyJwtRole(secretKey) === 'anon') {
+  console.error('That is a publishable (or legacy anon) key, which can only do what Row Level Security allows.');
+  console.error('This script needs a secret key (sb_secret_...) from Settings → API Keys in the Supabase dashboard.');
+  process.exit(1);
+}
+if (legacyJwtRole(secretKey) === 'service_role') {
+  console.log('Note: using a legacy service_role key. Supabase is deprecating these by the end of 2026; prefer SUPABASE_SECRET_KEY=sb_secret_...\n');
+}
+
+const supabase = createClient(supabaseUrl, secretKey, {
   auth: { persistSession: false, autoRefreshToken: false },
 });
 
@@ -159,6 +184,15 @@ async function processPhoto(url) {
 // --- main -------------------------------------------------------------------
 
 async function main() {
+  // Confirm the key really has admin access before doing anything: only an
+  // elevated key can list storage buckets, so a wrong key shows up here.
+  const { data: buckets, error: bucketsError } = await supabase.storage.listBuckets();
+  if (bucketsError || !buckets?.some((b) => b.name === BUCKET)) {
+    console.error(`Could not confirm admin access to the "${BUCKET}" bucket${bucketsError ? ` (${bucketsError.message})` : ''}.`);
+    console.error('Check that SUPABASE_SECRET_KEY is a secret key (sb_secret_...) for this project and that the URL is right.');
+    process.exit(1);
+  }
+
   console.log(APPLY ? 'APPLY mode — photos and listings will be updated.' : 'DRY RUN — nothing will be changed. Pass --apply to convert.');
   if (DELETE_ORIGINALS) console.log('Originals no longer used by any listing will be deleted at the end.');
   console.log('');
