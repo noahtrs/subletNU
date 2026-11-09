@@ -106,8 +106,18 @@ if (legacyJwtRole(secretKey) === 'service_role') {
   console.log('Note: using a legacy service_role key. Supabase is deprecating these by the end of 2026; prefer SUPABASE_SECRET_KEY=sb_secret_...\n');
 }
 
+// This script never uses Realtime, but supabase-js builds a Realtime client up
+// front and, on Node < 22 (no built-in WebSocket), throws "native WebSocket not
+// found". Give it a placeholder so the script runs on older Node too.
+class RealtimeNotUsed {
+  constructor() {
+    throw new Error('Realtime is not used by this script');
+  }
+}
+
 const supabase = createClient(supabaseUrl, secretKey, {
   auth: { persistSession: false, autoRefreshToken: false },
+  realtime: { transport: RealtimeNotUsed },
 });
 
 const PUBLIC_PREFIX = `/storage/v1/object/public/${BUCKET}/`;
