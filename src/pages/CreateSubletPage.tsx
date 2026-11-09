@@ -423,29 +423,11 @@ const CreateSubletPage = () => {
     try {
       // Only send captcha token in production
       const verifyCaptchaToken = import.meta.env.MODE !== 'development' ? captchaToken : undefined;
-      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
       if (verifyCaptchaToken) {
-        if (!supabaseUrl) {
-          toast({
-            title: "Configuration Error",
-            description: "Supabase URL is not set. Please contact support.",
-            variant: "destructive",
-          });
-          setIsSubmitting(false);
-          return;
-        }
-        const verifyResponse = await fetch(`${supabaseUrl}/functions/v1/verify-captcha`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-          },
-          body: JSON.stringify({
-            token: verifyCaptchaToken,
-          }),
+        const { data: verifyResult, error: verifyError } = await supabase.functions.invoke('verify-captcha', {
+          body: { token: verifyCaptchaToken },
         });
-        const verifyResult = await verifyResponse.json();
-        if (!verifyResult.success) {
+        if (verifyError || !verifyResult?.success) {
           toast({
             title: "Verification Failed",
             description: "Please complete the captcha verification again.",

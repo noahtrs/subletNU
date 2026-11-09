@@ -24,8 +24,9 @@ There is no test suite. Verify changes with `tsc`, `npm run build`, and by runni
 
 ## Env vars
 
-Client (`VITE_*`): `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `GOOGLE_MAPS_API_KEY`, `GEOCODE_API_KEY`, `CAPTCHA_SITE_KEY`.
-Edge functions: `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `RESEND_API_KEY`, `CAPTCHA_SECRET_KEY`, and the service role key under two names — `delete-user` reads `SERVICE_ROLE_KEY`, `send-message-notification` reads `SUPABASE_SERVICE_ROLE_KEY`.
+Client (`VITE_*`): `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY` (`sb_publishable_...`; `client.ts` falls back to the old `VITE_SUPABASE_ANON_KEY` name and warns if the key is a legacy `eyJ...` JWT), `GOOGLE_MAPS_API_KEY`, `GEOCODE_API_KEY`, `CAPTCHA_SITE_KEY`.
+Edge functions: `RESEND_API_KEY`, `CAPTCHA_SECRET_KEY`, plus the platform-injected `SUPABASE_URL` and `SUPABASE_SECRET_KEYS` (JSON dict; `_shared/supabase-admin.ts` uses its `default` key, falling back to the legacy `SUPABASE_SERVICE_ROLE_KEY`). Don't read `SUPABASE_ANON_KEY` / `SUPABASE_SERVICE_ROLE_KEY` in new code: they hold the legacy JWT keys Supabase is retiring at the end of 2026.
+Admin scripts (`scripts/`): `SUPABASE_SECRET_KEY` (`sb_secret_...`), never `VITE_`-prefixed.
 
 ## Architecture
 
@@ -44,9 +45,10 @@ Edge functions: `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `RESEND_API_KEY`, `CAPTCHA_
 
 ## Edge functions (`supabase/functions/`)
 
-Deployed separately with the Supabase CLI; changing files here does nothing until deployed.
-- `verify-captcha` — Turnstile siteverify.
-- `send-message-notification` — emails the receiver; requires the caller's JWT to be the message sender (call via `supabase.functions.invoke`).
+Deployed separately with the Supabase CLI; changing files here does nothing until deployed. All three have `verify_jwt = false` in `supabase/config.toml`: the platform JWT gate rejects publishable keys (not JWTs), so functions authenticate callers themselves. Call them with `supabase.functions.invoke` (it sends the key in the `apikey` header; a bare `Authorization: Bearer <publishable key>` is rejected).
+- `_shared/supabase-admin.ts` — `createAdminClient()` (secret key) and `getCallerUser(admin, req)`, which validates the caller's session token with Supabase Auth (`auth.getUser`, works for HS256 and asymmetric signing keys). `@supabase/server`'s `withSupabase` would need the project on asymmetric JWT signing keys; it rejects HS256 tokens.
+- `verify-captcha` — Turnstile siteverify. Public (called before signup).
+- `send-message-notification` — emails the receiver; requires the caller to be the message sender.
 - `delete-user` — deletes the caller's sublets, messages, profile, and auth user.
 
 ## Known issues

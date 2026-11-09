@@ -125,29 +125,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     // Verify captcha token if provided
     if (metadata?.captcha_token) {
-      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-      if (!supabaseUrl) {
-        toast({
-          title: "Configuration Error",
-          description: "Supabase URL is not set. Please contact support.",
-          variant: "destructive",
-        });
-        return false;
-      }
       try {
-        const response = await fetch(`${supabaseUrl}/functions/v1/verify-captcha`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-          },
-          body: JSON.stringify({
-            token: metadata.captcha_token,
-          }),
+        // functions.invoke sends the publishable key in the `apikey` header;
+        // a bare `Authorization: Bearer <publishable key>` is rejected.
+        const { data: result, error: verifyError } = await supabase.functions.invoke('verify-captcha', {
+          body: { token: metadata.captcha_token },
         });
-
-        const result = await response.json();
-        if (!result.success) {
+        if (verifyError || !result?.success) {
           toast({
             title: "Verification Failed",
             description: "Please complete the captcha verification again.",
