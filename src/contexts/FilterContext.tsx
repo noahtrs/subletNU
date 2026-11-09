@@ -34,7 +34,11 @@ export const FilterProvider = ({ children }: { children: ReactNode }) => {
   const [pricingTypeFilter, setPricingTypeFilter] = useState<"firm" | "negotiable" | "all">("all");
   const [amenitiesFilter, setAmenitiesFilter] = useState<string[]>([]);
 
-  const filteredSublets = isLoadingSublets || !sublets
+  // While the first fetch is in flight, `sublets` holds the cached list from the
+  // last visit (if any), so filter and show that instead of a spinner.
+  const isLoading = isLoadingSublets && sublets.length === 0;
+
+  const filteredSublets = isLoading || !sublets
     ? []
     : sublets.filter((sublet) => {
       // Listings whose dates have passed stay in the DB (owners can still see,
@@ -67,7 +71,7 @@ export const FilterProvider = ({ children }: { children: ReactNode }) => {
 
   const value = {
     filteredSublets,
-    isLoading: isLoadingSublets,
+    isLoading,
     maxPrice,
     maxDistance,
     dateRange,
