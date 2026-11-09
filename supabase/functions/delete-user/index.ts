@@ -1,24 +1,17 @@
-/// <reference types="https://deno.land/x/types/index.d.ts" />
-/// <reference lib="deno.ns" />
-
-import { serve } from 'https://deno.land/std@0.208.0/http/server.ts'
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { corsHeaders } from '../_shared/cors.ts'
+import { createAdminClient, getCallerUser } from '../_shared/supabase-admin.ts'
 
-serve(async (req) => {
+Deno.serve(async (req) => {
   // Handle CORS preflight request
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
   }
 
   try {
-    // Validate environment variables
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')
-    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')
-    const supabaseServiceRoleKey = Deno.env.get('SERVICE_ROLE_KEY')
-
-    if (!supabaseUrl || !supabaseAnonKey || !supabaseServiceRoleKey) {
-      console.error('Missing required environment variables')
+    // Admin client using the project's secret key (see _shared/supabase-admin.ts)
+    const supabaseAdmin = createAdminClient()
+    if (!supabaseAdmin) {
+      console.error('Missing SUPABASE_URL or secret key')
       return new Response(
         JSON.stringify({ 
           error: 'Server configuration error',
@@ -29,32 +22,15 @@ serve(async (req) => {
       })
     }
 
-    // Create Supabase client with auth context from the incoming request
-    const supabaseClient = createClient(
-      supabaseUrl,
-      supabaseAnonKey,
-      { global: { headers: { Authorization: req.headers.get('Authorization')! } } }
-    )
-
-    // Get user ID from the request's authentication context
-    const { data: { user }, error: getUserError } = await supabaseClient.auth.getUser()
-
-    if (getUserError) {
-      console.error('Auth error getting user:', getUserError);
-      return new Response(JSON.stringify({ error: 'Authentication failed' }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 401,
-      })
-    }
-
+    // Only the signed-in user can delete themselves: verify the caller's
+    // session token with Supabase Auth (verify_jwt is off for this function).
+    const user = await getCallerUser(supabaseAdmin, req)
     if (!user) {
       return new Response(JSON.stringify({ error: 'User not authenticated' }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 401,
       })
     }
-
-    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceRoleKey);
 
     try {
       // 1. Delete associated Sublets
@@ -108,7 +84,7 @@ serve(async (req) => {
       });
     } catch (error) {
       console.error(`Critical error during user deletion process for ${user.id}:`, error);
-      return new Response(error.message || 'Internal Server Error', {
+      return new Response((error as Error).message || 'Internal Server Error', {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 500,
       });
@@ -116,7 +92,7 @@ serve(async (req) => {
   } catch (error) {
     // Catch errors in the initial setup (env vars, client creation)
     console.error('Function setup error:', error);
-    return new Response(error.message || 'Function Setup Error', {
+    return new Response((error as Error).message || 'Function Setup Error', {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 500,
     });

@@ -6,16 +6,23 @@ import { promisify } from 'util';
 // Load environment variables
 config();
 
-const supabaseUrl = process.env.VITE_SUPABASE_URL;
-const serviceRoleKey = process.env.VITE_SUPABASE_SERVICE_ROLE_KEY;
+const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
+// Secret key (sb_secret_..., Dashboard → Settings → API Keys). Never give it a
+// VITE_ prefix: Vite inlines VITE_* vars into the public bundle. The legacy
+// service_role key still works as a fallback until Supabase retires it.
+const secretKey = process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-if (!supabaseUrl || !serviceRoleKey) {
-  console.error('❌ Missing VITE_SUPABASE_URL or VITE_SUPABASE_SERVICE_ROLE_KEY');
+if (!supabaseUrl || !secretKey) {
+  console.error('❌ Missing VITE_SUPABASE_URL (or SUPABASE_URL) or SUPABASE_SECRET_KEY in .env');
+  process.exit(1);
+}
+if (secretKey.startsWith('sb_publishable_')) {
+  console.error('❌ SUPABASE_SECRET_KEY is a publishable key; this script needs a secret key (sb_secret_...)');
   process.exit(1);
 }
 
-// Create admin client with service role key
-const supabase = createClient(supabaseUrl, serviceRoleKey);
+// Create admin client with the secret key
+const supabase = createClient(supabaseUrl, secretKey);
 
 const listingId = '2188e736-09e6-4c66-80ea-3580e141e3e6';
 

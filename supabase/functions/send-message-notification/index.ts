@@ -1,6 +1,5 @@
-import { serve } from 'https://deno.land/std@0.177.0/http/server.ts'
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.7.1'
 import { corsHeaders } from '../_shared/cors.ts'
+import { createAdminClient, getCallerUser } from '../_shared/supabase-admin.ts'
 
 const escapeHtml = (value: string | null | undefined) =>
   (value ?? '')
@@ -16,24 +15,23 @@ const jsonResponse = (body: unknown, status: number) =>
     status,
   })
 
-serve(async (req) => {
+Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
   }
 
   try {
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')
-    const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
+    // Admin client using the project's secret key (see _shared/supabase-admin.ts)
+    const supabaseClient = createAdminClient()
     const resendKey = Deno.env.get('RESEND_API_KEY')
 
-    if (!supabaseUrl || !serviceRoleKey || !resendKey) {
+    if (!supabaseClient || !resendKey) {
       throw new Error('Missing required environment variables')
     }
 
-    const supabaseClient = createClient(supabaseUrl, serviceRoleKey)
-
-    const jwt = (req.headers.get('Authorization') ?? '').replace('Bearer ', '')
-    const { data: { user: caller } } = await supabaseClient.auth.getUser(jwt)
+    // The caller must be the message's sender: verify their session token with
+    // Supabase Auth (verify_jwt is off for this function).
+    const caller = await getCallerUser(supabaseClient, req)
     if (!caller) {
       return jsonResponse({ error: 'Not authenticated' }, 401)
     }
@@ -102,6 +100,6 @@ serve(async (req) => {
     return jsonResponse({ success: true }, 200)
 
   } catch (error) {
-    return jsonResponse({ error: error.message }, 500)
+    return jsonResponse({ error: (error as Error).message }, 500)
   }
 })
