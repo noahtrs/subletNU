@@ -33,7 +33,7 @@ Edge functions: `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `RESEND_API_KEY`, `CAPTCHA_
 - Email confirmation: the Supabase "Confirm signup" template links to `{{ .SiteURL }}/confirm?token_hash={{ .TokenHash }}&type=email`; `ConfirmPage` calls `supabase.auth.verifyOtp`, which also logs the user in. Never confirm users server-side from an email address alone.
 - `AuthContext`: Supabase session; `isLoadingAuth` is true until the stored session is restored. Protected pages must wait for it before redirecting to `/auth`, or a hard refresh bounces logged-in users.
 - `SubletContext`: loads all sublets and refetches on any realtime change to `sublets`. Each refetch creates new object identities, so don't key effects on a `sublet` object if that would reset user input (see `EditSubletPage`'s `hasInitializedForm`).
-- `MessageContext`: messages for the current user; realtime subscription only covers rows where the user is the receiver, so `sendMessage` appends the sender's own message locally. Context callbacks used as effect deps must be `useCallback`-stable.
+- `MessageContext`: messages for the current user; realtime subscription only covers rows where the user is the receiver, so `sendMessage` appends the sender's own message locally. Context callbacks used as effect deps must be `useCallback`-stable. Contact names are loaded from `profiles` in `MessagesPage`, not the context.
 - `FilterContext`: client-side filtering of `sublets` (defaults: max $3000, max 5 mi).
 - `useSavedListings` is a hook, not a context — each caller has its own state.
 - DB rows are snake_case; app types in `src/types/index.ts` are camelCase. Row→`Sublet` mapping is duplicated in SubletContext, SubletDetailPage, ProfilePage, useSavedListings — update all of them when adding a column.

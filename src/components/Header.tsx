@@ -15,8 +15,7 @@ const Header = ({ title, right, left }: HeaderProps) => {
   const isMobile = useIsMobile();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const navigate = useNavigate();
-  const { getTotalUnreadCount } = useMessage();
-  const totalUnreadCount = getTotalUnreadCount();
+  const { unreadCount: totalUnreadCount } = useMessage();
 
   return (
     <>

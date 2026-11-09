@@ -31,6 +31,7 @@ export interface Message {
   receiverId: string;
   text: string;
   timestamp: string;
+  isRead: boolean;
 }
 
 export interface SavedListing {

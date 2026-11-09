@@ -5,10 +5,8 @@ import { useMessage } from "@/contexts/MessageContext";
 const BottomNav = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { getTotalUnreadCount } = useMessage();
+  const { unreadCount: totalUnreadCount } = useMessage();
   const pathname = location.pathname;
-
-  const totalUnreadCount = getTotalUnreadCount();
 
   return (
     <div className="bottom-nav">
