@@ -26,3 +26,6 @@ dist-ssr
 *.sln
 *.sw?
 .vercel
+
+# Output of scripts/compress-existing-photos.mjs
+compress-photos-log-*.json
