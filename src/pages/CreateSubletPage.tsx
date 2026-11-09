@@ -28,6 +28,7 @@ import LocationAutocomplete from "@/components/LocationAutocomplete";
 import { Drawer, DrawerContent, DrawerHeader } from "@/components/ui/drawer";
 import { useIsMobile } from "@/hooks/use-mobile";
 import Header from "@/components/Header";
+import { supabase } from "@/integrations/supabase/client";
 
 // Define Northeastern University coordinates
 const NEU_COORDINATES = { lat: 42.3398, lng: -71.0892 };
@@ -470,9 +471,6 @@ const CreateSubletPage = () => {
           throw new Error(`Failed to upload ${file.name}.`);
         }
       }));
-
-      // Import Supabase client directly to avoid context issues
-      const { supabase } = await import('@/integrations/supabase/client');
 
       // Insert the sublet directly
       const { data, error } = await supabase
