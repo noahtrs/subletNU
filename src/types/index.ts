@@ -25,6 +25,14 @@ export interface Sublet {
   saved_at?: string;
 }
 
+export interface Message {
+  id: string;
+  senderId: string;
+  receiverId: string;
+  text: string;
+  timestamp: string;
+}
+
 export interface SavedListing {
   id: string;
   userId: string;

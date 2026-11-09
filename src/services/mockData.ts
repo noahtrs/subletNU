@@ -1,5 +1,5 @@
 
-import { Sublet, User } from "../types";
+import { Sublet, User, Message } from "../types";
 
 // Mock Users
 export const mockUsers: User[] = [
@@ -78,3 +78,20 @@ export const mockSublets: Sublet[] = [
   },
 ];
 
+// Mock Messages
+export const mockMessages: Message[] = [
+  {
+    id: "msg1",
+    senderId: "user2",
+    receiverId: "user1",
+    text: "Is the apartment still available?",
+    timestamp: "2023-03-21T10:15:00Z",
+  },
+  {
+    id: "msg2",
+    senderId: "user1",
+    receiverId: "user2",
+    text: "Yes, it's available! When would you like to see it?",
+    timestamp: "2023-03-21T10:35:00Z",
+  },
+];

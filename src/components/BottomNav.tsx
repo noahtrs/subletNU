@@ -1,12 +1,14 @@
 import { Home, PlusCircle, MessageSquare, User, Heart } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { useUnreadCount } from "@/components/TalkSession";
+import { useMessage } from "@/contexts/MessageContext";
 
 const BottomNav = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const totalUnreadCount = useUnreadCount();
+  const { getTotalUnreadCount } = useMessage();
   const pathname = location.pathname;
+
+  const totalUnreadCount = getTotalUnreadCount();
 
   return (
     <div className="bottom-nav">

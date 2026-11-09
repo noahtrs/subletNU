@@ -1,18 +1,18 @@
 import { ReactNode } from "react";
 import { AuthProvider } from "./AuthContext";
 import { SubletProvider } from "./SubletContext";
+import { MessageProvider } from "./MessageContext";
 import { FilterProvider } from "./FilterContext";
-import { TalkSession } from "@/components/TalkSession";
 
 export const AppProvider = ({ children }: { children: ReactNode }) => {
   return (
     <AuthProvider>
       <SubletProvider>
-        <FilterProvider>
-          <TalkSession>
+        <MessageProvider>
+          <FilterProvider>
             {children}
-          </TalkSession>
-        </FilterProvider>
+          </FilterProvider>
+        </MessageProvider>
       </SubletProvider>
     </AuthProvider>
   );
