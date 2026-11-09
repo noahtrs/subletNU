@@ -41,6 +41,8 @@ export default defineConfig(({ mode }) => ({
       output: {
         manualChunks: {
           'react-vendor': ['react', 'react-dom', 'react-router-dom'],
+          'supabase-vendor': ['@supabase/supabase-js'],
+          'motion-vendor': ['framer-motion'],
         },
         assetFileNames: 'assets/[name].[hash].[ext]'
       }
