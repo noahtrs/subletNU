@@ -1,1 +1,19 @@
 project_id = "vojxqyfkkkdxnbevnqmi"
+
+# The platform's verify_jwt gate only understands JWTs. With the new API keys,
+# logged-out callers send a publishable key (sb_publishable_...), which is not a
+# JWT, so the gate would reject them. These functions authenticate callers
+# themselves instead: delete-user and send-message-notification verify the
+# caller's session token with Supabase Auth (_shared/supabase-admin.ts), and
+# verify-captcha is public (it is called before signup).
+# `supabase functions deploy` reads these settings; keep them in sync with the
+# "Enforce JWT verification" toggle in the dashboard.
+
+[functions.verify-captcha]
+verify_jwt = false
+
+[functions.delete-user]
+verify_jwt = false
+
+[functions.send-message-notification]
+verify_jwt = false

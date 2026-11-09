@@ -48,14 +48,14 @@ Create a `.env` file in the root with:
 ```bash
 # Supabase Configuration
 VITE_SUPABASE_URL=https://your-project-ref.supabase.co
-VITE_SUPABASE_ANON_KEY=your-anon-key
+VITE_SUPABASE_PUBLISHABLE_KEY=sb_publishable_your-key
 
 # Google Maps API Keys
 VITE_GOOGLE_MAPS_API_KEY=your-google-maps-api-key
 VITE_GEOCODE_API_KEY=your-geocoding-api-key
 
 # Cloudflare Turnstile (bot protection)
-VITE_TURNSTILE_SITE_KEY=your-turnstile-site-key
+VITE_CAPTCHA_SITE_KEY=your-turnstile-site-key
 ```
 
 ## Architecture

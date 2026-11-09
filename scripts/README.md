@@ -5,7 +5,7 @@ This directory contains administrative scripts for managing the SubletNU platfor
 ## Files
 
 ### admin-fix-heic.mjs
-Converts HEIC images to JPEG for existing listings. Requires `VITE_SUPABASE_SERVICE_ROLE_KEY` in `.env`.
+Converts HEIC images to JPEG for existing listings. Requires a Supabase **secret key** (`sb_secret_...`, Dashboard → Settings → API Keys) in `.env` as `SUPABASE_SECRET_KEY` (never with a `VITE_` prefix). A legacy `service_role` key in `SUPABASE_SERVICE_ROLE_KEY` also works until Supabase retires those keys (end of 2026).
 
 Usage:
 ```bash
@@ -43,9 +43,9 @@ Legacy debug script for listing investigation.
 
 All scripts require environment variables in `.env`:
 - `VITE_SUPABASE_URL`
-- `VITE_SUPABASE_ANON_KEY`
-- `VITE_SUPABASE_SERVICE_ROLE_KEY` (older admin scripts) / `SUPABASE_SECRET_KEY` (`compress-existing-photos.mjs`)
+- `VITE_SUPABASE_PUBLISHABLE_KEY` (`sb_publishable_...`; the old `VITE_SUPABASE_ANON_KEY` name is still read as a fallback)
+- `SUPABASE_SECRET_KEY` (`sb_secret_...`, admin scripts only)
 
 ## Security
 
-**Never commit the secret / service role key to version control.** It should only exist in `.env` locally.
+**Never commit the secret key to version control or give it a `VITE_` prefix** (Vite inlines `VITE_*` vars into the public bundle). It should only exist in `.env` locally.

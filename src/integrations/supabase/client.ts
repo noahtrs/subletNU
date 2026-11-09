@@ -4,7 +4,17 @@ import type { Database } from './types';
 
 // Use environment variables for client-side
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
-const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
+// Publishable key (sb_publishable_...). VITE_SUPABASE_ANON_KEY is the old name,
+// kept as a fallback so a deploy doesn't break before the env var is renamed.
+const SUPABASE_PUBLISHABLE_KEY =
+  import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+if (SUPABASE_PUBLISHABLE_KEY?.startsWith('eyJ')) {
+  console.warn(
+    'Supabase is configured with a legacy anon JWT key, which stops working once legacy API keys are disabled. ' +
+      'Set VITE_SUPABASE_PUBLISHABLE_KEY to the sb_publishable_... key from Settings → API Keys.'
+  );
+}
 
 // Import the supabase client like this:
 // import { supabase } from "@/integrations/supabase/client";
