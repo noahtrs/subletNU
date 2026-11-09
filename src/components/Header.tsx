@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Drawer, DrawerContent, DrawerHeader } from "@/components/ui/drawer";
 import { Menu as MenuIcon, Home, PlusCircle, MessageSquare, User, Heart } from "lucide-react";
-import { useMessage } from "@/contexts/MessageContext";
+import { useUnreadCount } from "@/components/TalkSession";
 
 interface HeaderProps {
   title: string;
@@ -15,8 +15,7 @@ const Header = ({ title, right, left }: HeaderProps) => {
   const isMobile = useIsMobile();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const navigate = useNavigate();
-  const { getTotalUnreadCount } = useMessage();
-  const totalUnreadCount = getTotalUnreadCount();
+  const totalUnreadCount = useUnreadCount();
 
   return (
     <>

@@ -1,6 +1,6 @@
 # SubletNU
 
-Sublet marketplace for Northeastern students (subletnu.com). Users sign up with a `@northeastern.edu` email, post listings with photos, filter/save listings, and message each other.
+Sublet marketplace for Northeastern students (subletnu.com). Users sign up with a `@northeastern.edu` email, post listings with photos, filter/save listings, and message each other (via TalkJS).
 
 ## Stack
 
@@ -8,6 +8,7 @@ Sublet marketplace for Northeastern students (subletnu.com). Users sign up with 
 - Supabase: Postgres, Auth, Storage (`sublet-photos` bucket), Realtime, Edge Functions (project ref `vojxqyfkkkdxnbevnqmi`)
 - Vercel hosting; `vercel.json` rewrites all routes to `index.html` (there are currently no `api/` serverless functions)
 - Google Maps (Places autocomplete, Distance Matrix, Geocoding), Cloudflare Turnstile captcha, Resend for email
+- TalkJS for messaging (`talkjs` + `@talkjs/react`): hosted chat UI, realtime, unread counts, and email notifications
 - Originally scaffolded with Lovable (`lovable-tagger`, `gptengineer.js` script tag in `index.html` must stay)
 
 ## Commands
@@ -24,16 +25,16 @@ There is no test suite. Verify changes with `tsc`, `npm run build`, and by runni
 
 ## Env vars
 
-Client (`VITE_*`): `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `GOOGLE_MAPS_API_KEY`, `GEOCODE_API_KEY`, `CAPTCHA_SITE_KEY`.
-Edge functions: `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `RESEND_API_KEY`, `CAPTCHA_SECRET_KEY`, and the service role key under two names — `delete-user` reads `SERVICE_ROLE_KEY`, `send-message-notification` reads `SUPABASE_SERVICE_ROLE_KEY`.
+Client (`VITE_*`): `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `GOOGLE_MAPS_API_KEY`, `GEOCODE_API_KEY`, `CAPTCHA_SITE_KEY`, `TALKJS_APP_ID`.
+Edge functions: `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `RESEND_API_KEY`, `CAPTCHA_SECRET_KEY`, `TALKJS_APP_ID`, `TALKJS_SECRET_KEY`, and the service role key under two names — `delete-user` reads `SERVICE_ROLE_KEY`, `talkjs` reads `SUPABASE_SERVICE_ROLE_KEY`.
 
 ## Architecture
 
-- `src/contexts/AppContext.tsx` nests providers: Auth → Sublet → Message → Filter. Order matters (each uses the one above).
+- `src/contexts/AppContext.tsx` nests providers: Auth → Sublet → Filter → `TalkSession`. Order matters (each uses the one above).
 - Email confirmation: the Supabase "Confirm signup" template links to `{{ .SiteURL }}/confirm?token_hash={{ .TokenHash }}&type=email`; `ConfirmPage` calls `supabase.auth.verifyOtp`, which also logs the user in. Never confirm users server-side from an email address alone.
 - `AuthContext`: Supabase session; `isLoadingAuth` is true until the stored session is restored. Protected pages must wait for it before redirecting to `/auth`, or a hard refresh bounces logged-in users.
 - `SubletContext`: loads all sublets and refetches on any realtime change to `sublets`. Each refetch creates new object identities, so don't key effects on a `sublet` object if that would reset user input (see `EditSubletPage`'s `hasInitializedForm`).
-- `MessageContext`: messages for the current user; realtime subscription only covers rows where the user is the receiver, so `sendMessage` appends the sender's own message locally. Context callbacks used as effect deps must be `useCallback`-stable.
+- Messaging is TalkJS. `src/components/TalkSession.tsx` mounts a TalkJS `<Session>` while logged in (token from the `talkjs` edge function) and exports `useUnreadCount()` for nav badges. `MessagesPage` renders TalkJS's `<Inbox>`; `/messages/:userId` asks the edge function for the 1-on-1 conversation ID first. Users and conversations are only created server-side (client-side syncing should be disabled in the TalkJS dashboard, with authentication enabled), so never call `session.user(...).set` / `conversation(...).createIfNotExists` from the client. The old Supabase `messages` table is no longer read or written by the app.
 - `FilterContext`: client-side filtering of `sublets` (defaults: max $3000, max 5 mi).
 - `useSavedListings` is a hook, not a context — each caller has its own state.
 - DB rows are snake_case; app types in `src/types/index.ts` are camelCase. Row→`Sublet` mapping is duplicated in SubletContext, SubletDetailPage, ProfilePage, useSavedListings — update all of them when adding a column.
@@ -46,8 +47,8 @@ Edge functions: `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `RESEND_API_KEY`, `CAPTCHA_
 
 Deployed separately with the Supabase CLI; changing files here does nothing until deployed.
 - `verify-captcha` — Turnstile siteverify.
-- `send-message-notification` — emails the receiver; requires the caller's JWT to be the message sender (call via `supabase.functions.invoke`).
-- `delete-user` — deletes the caller's sublets, messages, profile, and auth user.
+- `talkjs` — holds the TalkJS secret key. With no body: syncs the caller's profile (name, email) to TalkJS and returns a session JWT. With `{ otherUserId }`: syncs that user and creates/updates the 1-on-1 conversation, returning `{ conversationId }`. TalkJS sends the new-message emails.
+- `delete-user` — deletes the caller's sublets, legacy `messages` rows, profile, and auth user (not their TalkJS user).
 
 ## Known issues
 
